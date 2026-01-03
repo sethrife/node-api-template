@@ -17,7 +17,19 @@ export class HealthController {
       redisError = error instanceof Error ? error.message : 'Unknown error';
     }
 
-    const overallStatus = redisStatus === 'ok' ? 'ok' : 'degraded';
+    let mssqlStatus = 'ok';
+    let mssqlError: string | undefined;
+
+    try {
+      // Ping MSSQL to verify connection using MssqlService
+      const result = await request.server.mssql.ping();
+      mssqlStatus = result ? 'ok' : 'error';
+    } catch (error) {
+      mssqlStatus = 'error';
+      mssqlError = error instanceof Error ? error.message : 'Unknown error';
+    }
+
+    const overallStatus = redisStatus === 'ok' && mssqlStatus === 'ok' ? 'ok' : 'degraded';
 
     return reply.send({
       status: overallStatus,
@@ -26,6 +38,10 @@ export class HealthController {
         redis: {
           status: redisStatus,
           ...(redisError && { error: redisError }),
+        },
+        mssql: {
+          status: mssqlStatus,
+          ...(mssqlError && { error: mssqlError }),
         },
       },
     });

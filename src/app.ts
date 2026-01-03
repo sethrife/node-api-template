@@ -2,6 +2,7 @@
 import 'reflect-metadata';
 import Fastify, { FastifyInstance } from 'fastify';
 import redisPlugin from './plugins/redis.plugin';
+import mssqlPlugin from './plugins/mssql.plugin';
 import { registerControllers } from './utils/registerControllers';
 import { HealthController } from './controllers/health.controller';
 import { UserController } from './controllers/user.controller';
@@ -18,6 +19,9 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Register Redis plugin
   await app.register(redisPlugin);
+
+  // Register MSSQL plugin
+  await app.register(mssqlPlugin);
 
   // Register all controllers
   registerControllers(app, [HealthController, UserController]);
