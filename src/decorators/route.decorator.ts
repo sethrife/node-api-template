@@ -24,7 +24,7 @@ export function Get(path: string = '') {
     routes.push({
       method: 'GET',
       path,
-      methodName: propertyKey
+      methodName: propertyKey,
     });
     Reflect.defineMetadata(ROUTES_KEY, routes, target.constructor);
   };
@@ -36,7 +36,7 @@ export function Post(path: string = '') {
     routes.push({
       method: 'POST',
       path,
-      methodName: propertyKey
+      methodName: propertyKey,
     });
     Reflect.defineMetadata(ROUTES_KEY, routes, target.constructor);
   };
@@ -48,7 +48,7 @@ export function Put(path: string = '') {
     routes.push({
       method: 'PUT',
       path,
-      methodName: propertyKey
+      methodName: propertyKey,
     });
     Reflect.defineMetadata(ROUTES_KEY, routes, target.constructor);
   };
@@ -60,7 +60,7 @@ export function Delete(path: string = '') {
     routes.push({
       method: 'DELETE',
       path,
-      methodName: propertyKey
+      methodName: propertyKey,
     });
     Reflect.defineMetadata(ROUTES_KEY, routes, target.constructor);
   };

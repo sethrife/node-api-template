@@ -5,7 +5,7 @@ describe('UserController', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
-    app = buildApp();
+    app = await buildApp();
     await app.ready();
   });
 
@@ -17,7 +17,7 @@ describe('UserController', () => {
     it('should return all users', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/users'
+        url: '/users',
       });
 
       expect(response.statusCode).toBe(200);
@@ -31,7 +31,7 @@ describe('UserController', () => {
     it('should return a user by id', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/users/1'
+        url: '/users/1',
       });
 
       expect(response.statusCode).toBe(200);
@@ -44,7 +44,7 @@ describe('UserController', () => {
     it('should return 404 for non-existent user', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/users/999'
+        url: '/users/999',
       });
 
       expect(response.statusCode).toBe(404);
@@ -57,13 +57,13 @@ describe('UserController', () => {
     it('should create a new user', async () => {
       const newUser = {
         name: 'Test User',
-        email: 'test@example.com'
+        email: 'test@example.com',
       };
 
       const response = await app.inject({
         method: 'POST',
         url: '/users',
-        payload: newUser
+        payload: newUser,
       });
 
       expect(response.statusCode).toBe(201);
@@ -77,13 +77,13 @@ describe('UserController', () => {
   describe('PUT /users/:id', () => {
     it('should update an existing user', async () => {
       const updates = {
-        name: 'Updated Name'
+        name: 'Updated Name',
       };
 
       const response = await app.inject({
         method: 'PUT',
         url: '/users/1',
-        payload: updates
+        payload: updates,
       });
 
       expect(response.statusCode).toBe(200);
@@ -95,7 +95,7 @@ describe('UserController', () => {
       const response = await app.inject({
         method: 'PUT',
         url: '/users/999',
-        payload: { name: 'Test' }
+        payload: { name: 'Test' },
       });
 
       expect(response.statusCode).toBe(404);
@@ -106,7 +106,7 @@ describe('UserController', () => {
     it('should delete an existing user', async () => {
       const response = await app.inject({
         method: 'DELETE',
-        url: '/users/2'
+        url: '/users/2',
       });
 
       expect(response.statusCode).toBe(204);
@@ -115,7 +115,7 @@ describe('UserController', () => {
     it('should return 404 for non-existent user', async () => {
       const response = await app.inject({
         method: 'DELETE',
-        url: '/users/999'
+        url: '/users/999',
       });
 
       expect(response.statusCode).toBe(404);

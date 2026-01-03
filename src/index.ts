@@ -1,11 +1,11 @@
 import { buildApp } from './app';
-import {configureLogger} from "./utils/logger";
+import { configureLogger } from './utils/logger';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function start() {
-  const app = buildApp();
+  const app = await buildApp();
 
   configureLogger(app);
 

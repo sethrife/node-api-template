@@ -11,7 +11,7 @@ interface User {
 export class UserController {
   private users: User[] = [
     { id: 1, name: 'John Doe', email: 'john@example.com' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com' }
+    { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
   ];
 
   @Get('/')
@@ -20,12 +20,9 @@ export class UserController {
   }
 
   @Get('/:id')
-  async getUserById(
-    request: FastifyRequest<{ Params: { id: string } }>,
-    reply: FastifyReply
-  ) {
+  async getUserById(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
     const id = parseInt(request.params.id);
-    const user = this.users.find(u => u.id === id);
+    const user = this.users.find((u) => u.id === id);
 
     if (!user) {
       return reply.status(404).send({ error: 'User not found' });
@@ -35,13 +32,10 @@ export class UserController {
   }
 
   @Post('/')
-  async createUser(
-    request: FastifyRequest<{ Body: Omit<User, 'id'> }>,
-    reply: FastifyReply
-  ) {
+  async createUser(request: FastifyRequest<{ Body: Omit<User, 'id'> }>, reply: FastifyReply) {
     const newUser: User = {
       id: this.users.length + 1,
-      ...request.body
+      ...request.body,
     };
 
     this.users.push(newUser);
@@ -54,7 +48,7 @@ export class UserController {
     reply: FastifyReply
   ) {
     const id = parseInt(request.params.id);
-    const userIndex = this.users.findIndex(u => u.id === id);
+    const userIndex = this.users.findIndex((u) => u.id === id);
 
     if (userIndex === -1) {
       return reply.status(404).send({ error: 'User not found' });
@@ -65,12 +59,9 @@ export class UserController {
   }
 
   @Delete('/:id')
-  async deleteUser(
-    request: FastifyRequest<{ Params: { id: string } }>,
-    reply: FastifyReply
-  ) {
+  async deleteUser(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
     const id = parseInt(request.params.id);
-    const userIndex = this.users.findIndex(u => u.id === id);
+    const userIndex = this.users.findIndex((u) => u.id === id);
 
     if (userIndex === -1) {
       return reply.status(404).send({ error: 'User not found' });
