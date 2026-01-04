@@ -1,5 +1,8 @@
 import RedisMock from 'ioredis-mock';
 
+// Set required environment variables for tests
+process.env.JWKS_URL = 'https://test.example.com/.well-known/jwks.json';
+
 // Mock ioredis with ioredis-mock for all tests
 jest.mock('ioredis', () => {
   return jest.fn().mockImplementation(() => {

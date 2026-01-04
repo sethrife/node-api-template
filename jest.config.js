@@ -10,5 +10,8 @@ module.exports = {
     '!src/**/__tests__/**'
   ],
   coverageDirectory: 'coverage',
-  verbose: true
+  verbose: true,
+  moduleNameMapper: {
+    '^jose$': '<rootDir>/test/__mocks__/jose.ts'
+  }
 };
