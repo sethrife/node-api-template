@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { Controller, Get, Post } from '../decorators/route.decorator';
-import { jwtAuth } from '../middleware/jwt-auth';
+import { Controller, Get, Post } from '../decorators/route.decorator.js';
+import { jwtAuth } from '../middleware/jwt-auth.js';
 
 @Controller('/api/protected')
 export class ProtectedController {

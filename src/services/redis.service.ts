@@ -1,7 +1,5 @@
-import Redis from 'ioredis';
-
 export class RedisService {
-  constructor(private client: Redis) {}
+  constructor(private client: any) {}
 
   /**
    * Get a value from Redis
@@ -21,7 +19,7 @@ export class RedisService {
    * Set a value with expiration time (in seconds)
    */
   async setex(key: string, seconds: number, value: string): Promise<void> {
-    await this.client.setex(key, seconds, value);
+    await this.client.set(key, value, { EX: seconds });
   }
 
   /**
@@ -56,7 +54,7 @@ export class RedisService {
   /**
    * Get the raw Redis client for advanced operations
    */
-  getClient(): Redis {
+  getClient(): any {
     return this.client;
   }
 }

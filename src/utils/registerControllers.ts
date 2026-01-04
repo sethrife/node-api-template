@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { getRoutes, getPrefix } from '../decorators/route.decorator';
+import { getRoutes, getPrefix } from '../decorators/route.decorator.js';
 
 export function registerControllers(app: FastifyInstance, controllers: any[]) {
   for (const Controller of controllers) {

@@ -1,16 +1,16 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
-import * as sql from 'mssql';
-import { MssqlService } from '../services/mssql.service';
+import sql from 'mssql';
+import { MssqlService } from '../services/mssql.service.js';
 
 const mssqlPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // MSSQL configuration
   const config: sql.config = {
     server: process.env.MSSQL_SERVER || 'localhost',
     port: parseInt(process.env.MSSQL_PORT || '1433'),
-    database: process.env.MSSQL_DATABASE,
-    user: process.env.MSSQL_USER,
-    password: process.env.MSSQL_PASSWORD,
+    database: process.env.MSSQL_DATABASE || 'master',
+    user: process.env.MSSQL_USER || 'sa',
+    password: process.env.MSSQL_PASSWORD || 'RosieEnzoNeo@26',
     options: {
       encrypt: process.env.MSSQL_ENCRYPT === 'true',
       trustServerCertificate: process.env.MSSQL_TRUST_CERT === 'true',

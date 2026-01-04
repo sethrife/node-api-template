@@ -1,5 +1,6 @@
-import { RedisService } from '../services/redis.service';
-import { MssqlService } from '../services/mssql.service';
+import { RedisService } from '../services/redis.service.js';
+import { MssqlService } from '../services/mssql.service.js';
+import { JWTPayload } from 'jose';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -9,6 +10,7 @@ declare module 'fastify' {
 
   interface FastifyRequest {
     server: FastifyInstance;
+    user: JWTPayload;
   }
 }
 

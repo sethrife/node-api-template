@@ -1,5 +1,5 @@
-import { buildApp } from './app';
-import { configureLogger } from './utils/logger';
+import { buildApp } from './app.js';
+import { configureLogger } from './utils/logger.js';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const HOST = process.env.HOST || '0.0.0.0';

@@ -1,14 +1,18 @@
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose';
 import { preHandlerHookHandler } from 'fastify';
-import './jwt-types';
 
-// Validate JWKS_URL is configured
-if (!process.env.JWKS_URL) {
-  throw new Error('JWKS_URL environment variable is required');
+// Lazy initialization of JWKS fetcher
+let JWKS: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function getJWKS() {
+  if (!JWKS) {
+    if (!process.env.JWKS_URL) {
+      throw new Error('JWKS_URL environment variable is required for JWT authentication');
+    }
+    JWKS = createRemoteJWKSet(new URL(process.env.JWKS_URL));
+  }
+  return JWKS;
 }
-
-// Create JWKS fetcher (lazy loads on first use)
-const JWKS = createRemoteJWKSet(new URL(process.env.JWKS_URL));
 
 /**
  * Validates if the JWT payload contains the required scopes
@@ -55,7 +59,7 @@ export function jwtAuth(scopes?: string | string[]): preHandlerHookHandler {
 
     // Step 2: Verify JWT signature and expiration using JWKS
     try {
-      const { payload } = await jwtVerify(token, JWKS);
+      const { payload } = await jwtVerify(token, getJWKS());
 
       // Step 3: Attach payload to request.user
       request.user = payload;

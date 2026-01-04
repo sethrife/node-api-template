@@ -1,13 +1,13 @@
 /// <reference path="./types/fastify.d.ts" />
 import 'reflect-metadata';
 import Fastify, { FastifyInstance } from 'fastify';
-import redisPlugin from './plugins/redis.plugin';
-import mssqlPlugin from './plugins/mssql.plugin';
-import { registerControllers } from './utils/registerControllers';
-import { HealthController } from './controllers/health.controller';
-import { UserController } from './controllers/user.controller';
-import { ProtectedController } from './controllers/protected.controller';
-import { contextLoggerStorage } from './utils/logger';
+import redisPlugin from './plugins/redis.plugin.js';
+import mssqlPlugin from './plugins/mssql.plugin.js';
+import { registerControllers } from './utils/registerControllers.js';
+import { HealthController } from './controllers/health.controller.js';
+import { UserController } from './controllers/user.controller.js';
+import { ProtectedController } from './controllers/protected.controller.js';
+import { contextLoggerStorage } from './utils/logger.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({

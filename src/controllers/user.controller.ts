@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { Controller, Get, Post, Put, Delete } from '../decorators/route.decorator';
+import { Controller, Get, Post, Put, Delete } from '../decorators/route.decorator.js';
 
 interface User {
   id: number;

@@ -1,26 +1,44 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
-import Redis, { RedisOptions } from 'ioredis';
-import { RedisService } from '../services/redis.service';
+import { createClient, RedisClientOptions } from 'redis';
+import { RedisService } from '../services/redis.service.js';
 
 const redisPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Redis configuration
-  const config: RedisOptions = {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    db: parseInt(process.env.REDIS_DB || '0'),
-    maxRetriesPerRequest: 7,
-    retryStrategy: (times: number) => {
-      // Exponential backoff: 100ms, 200ms, 400ms
-      const delay = Math.min(times * 100, 3000);
-      fastify.log.warn({ attempt: times, delay }, 'Retrying Redis connection');
-      return delay;
+  const config: RedisClientOptions = {
+    socket: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      reconnectStrategy: (retries) => {
+        const delay = Math.min(retries * 50, 500);
+        fastify.log.warn({ attempt: retries, delay }, 'Retrying Redis connection');
+        return delay;
+      },
     },
+    password: process.env.REDIS_PASSWORD,
+    database: parseInt(process.env.REDIS_DB || '0'),
   };
 
   // Create Redis client
-  const client = new Redis(config);
+  const client = createClient(config);
+
+  // Handle Redis errors to prevent application crashes
+  client.on('error', (error) => {
+    fastify.log.error(error, 'Redis client error');
+    // Don't throw - let reconnectStrategy handle reconnection
+  });
+
+  // Handle reconnection events
+  client.on('reconnecting', () => {
+    fastify.log.warn('Redis client reconnecting...');
+  });
+
+  client.on('ready', () => {
+    fastify.log.info('Redis client ready');
+  });
+
+  // Connect to Redis (eager connection)
+  await client.connect();
 
   // Create RedisService wrapper
   const redisService = new RedisService(client);
@@ -39,7 +57,7 @@ const redisPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Cleanup on server close
   fastify.addHook('onClose', async () => {
     try {
-      await client.quit();
+      await client.disconnect();
       fastify.log.info('Redis connection closed');
     } catch (error) {
       fastify.log.error(error, 'Error closing Redis connection');
