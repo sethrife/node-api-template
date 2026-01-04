@@ -6,6 +6,7 @@ import mssqlPlugin from './plugins/mssql.plugin';
 import { registerControllers } from './utils/registerControllers';
 import { HealthController } from './controllers/health.controller';
 import { UserController } from './controllers/user.controller';
+import { ProtectedController } from './controllers/protected.controller';
 import { contextLoggerStorage } from './utils/logger';
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -24,7 +25,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(mssqlPlugin);
 
   // Register all controllers
-  registerControllers(app, [HealthController, UserController]);
+  registerControllers(app, [HealthController, UserController, ProtectedController]);
 
   return app;
 }
