@@ -20,7 +20,10 @@ export function Controller(prefix: string = '') {
   };
 }
 
-export function Get(path: string = '', middleware?: preHandlerHookHandler | preHandlerHookHandler[]) {
+export function Get(
+  path: string = '',
+  middleware?: preHandlerHookHandler | preHandlerHookHandler[]
+) {
   return function (target: any, propertyKey: string) {
     const routes: RouteDefinition[] = Reflect.getMetadata(ROUTES_KEY, target.constructor) || [];
     routes.push({
@@ -33,7 +36,10 @@ export function Get(path: string = '', middleware?: preHandlerHookHandler | preH
   };
 }
 
-export function Post(path: string = '', middleware?: preHandlerHookHandler | preHandlerHookHandler[]) {
+export function Post(
+  path: string = '',
+  middleware?: preHandlerHookHandler | preHandlerHookHandler[]
+) {
   return function (target: any, propertyKey: string) {
     const routes: RouteDefinition[] = Reflect.getMetadata(ROUTES_KEY, target.constructor) || [];
     routes.push({
@@ -46,7 +52,10 @@ export function Post(path: string = '', middleware?: preHandlerHookHandler | pre
   };
 }
 
-export function Put(path: string = '', middleware?: preHandlerHookHandler | preHandlerHookHandler[]) {
+export function Put(
+  path: string = '',
+  middleware?: preHandlerHookHandler | preHandlerHookHandler[]
+) {
   return function (target: any, propertyKey: string) {
     const routes: RouteDefinition[] = Reflect.getMetadata(ROUTES_KEY, target.constructor) || [];
     routes.push({
@@ -59,7 +68,10 @@ export function Put(path: string = '', middleware?: preHandlerHookHandler | preH
   };
 }
 
-export function Delete(path: string = '', middleware?: preHandlerHookHandler | preHandlerHookHandler[]) {
+export function Delete(
+  path: string = '',
+  middleware?: preHandlerHookHandler | preHandlerHookHandler[]
+) {
   return function (target: any, propertyKey: string) {
     const routes: RouteDefinition[] = Reflect.getMetadata(ROUTES_KEY, target.constructor) || [];
     routes.push({
@@ -72,7 +84,10 @@ export function Delete(path: string = '', middleware?: preHandlerHookHandler | p
   };
 }
 
-export function Patch(path: string = '', middleware?: preHandlerHookHandler | preHandlerHookHandler[]) {
+export function Patch(
+  path: string = '',
+  middleware?: preHandlerHookHandler | preHandlerHookHandler[]
+) {
   return function (target: any, propertyKey: string) {
     const routes: RouteDefinition[] = Reflect.getMetadata(ROUTES_KEY, target.constructor) || [];
     routes.push({
