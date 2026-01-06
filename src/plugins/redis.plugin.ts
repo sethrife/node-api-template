@@ -10,12 +10,17 @@ const redisPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     socket: {
       host: appConfig.redis.host,
       port: appConfig.redis.port,
-      reconnectStrategy: (retries) => {
+      tls: appConfig.redis.tls,
+      rejectUnauthorized: appConfig.redis.rejectUnauthorized,
+      ca: appConfig.redis.ca,
+      cert: appConfig.redis.cert,
+      key: appConfig.redis.key,
+      reconnectStrategy: (retries: number) => {
         const delay = Math.min(retries * 50, 500);
         fastify.log.warn({ attempt: retries, delay }, 'Retrying Redis connection');
         return delay;
       },
-    },
+    } as any,
     password: appConfig.redis.password,
     database: appConfig.redis.database,
   };

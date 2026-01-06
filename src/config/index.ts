@@ -17,6 +17,11 @@ interface RedisConfig {
   port: number;
   password: string | undefined;
   database: number;
+  tls: boolean;
+  rejectUnauthorized: boolean;
+  ca: string | undefined;
+  cert: string | undefined;
+  key: string | undefined;
 }
 
 interface MssqlConfig {
@@ -91,6 +96,11 @@ export const config: AppConfig = {
     port: getEnvInt('REDIS_PORT', 6379),
     password: getEnvString('REDIS_PASSWORD'),
     database: getEnvInt('REDIS_DB', 0),
+    tls: getEnvBool('REDIS_TLS', false),
+    rejectUnauthorized: getEnvBool('REDIS_REJECT_UNAUTHORIZED', true),
+    ca: getEnvString('REDIS_CA'),
+    cert: getEnvString('REDIS_CERT'),
+    key: getEnvString('REDIS_KEY'),
   },
 
   mssql: {
