@@ -1,8 +1,6 @@
 import { buildApp } from './app.js';
 import { configureLogger } from './utils/logger.js';
-
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
-const HOST = process.env.HOST || '0.0.0.0';
+import { config } from './config/index.js';
 
 async function start() {
   const app = await buildApp();
@@ -10,8 +8,8 @@ async function start() {
   configureLogger(app);
 
   try {
-    await app.listen({ port: PORT, host: HOST });
-    app.log.info(`Server is running on http://${HOST}:${PORT}`);
+    await app.listen({ port: config.server.port, host: config.server.host });
+    app.log.info(`Server is running on http://${config.server.host}:${config.server.port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);

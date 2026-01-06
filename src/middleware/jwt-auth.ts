@@ -1,15 +1,16 @@
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose';
 import { preHandlerHookHandler } from 'fastify';
+import { config } from '../config/index.js';
 
 // Lazy initialization of JWKS fetcher
 let JWKS: ReturnType<typeof createRemoteJWKSet> | null = null;
 
 function getJWKS() {
   if (!JWKS) {
-    if (!process.env.JWKS_URL) {
+    if (!config.jwt.jwksUrl) {
       throw new Error('JWKS_URL environment variable is required for JWT authentication');
     }
-    JWKS = createRemoteJWKSet(new URL(process.env.JWKS_URL));
+    JWKS = createRemoteJWKSet(new URL(config.jwt.jwksUrl));
   }
   return JWKS;
 }

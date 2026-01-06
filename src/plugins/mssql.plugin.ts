@@ -2,32 +2,14 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 import sql from 'mssql';
 import { MssqlService } from '../services/mssql.service.js';
+import { config as appConfig } from '../config/index.js';
 
 const mssqlPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
-  // MSSQL configuration
-  const config: sql.config = {
-    server: process.env.MSSQL_SERVER || 'localhost',
-    port: parseInt(process.env.MSSQL_PORT || '1433'),
-    database: process.env.MSSQL_DATABASE || 'master',
-    user: process.env.MSSQL_USER || 'sa',
-    password: process.env.MSSQL_PASSWORD || 'RosieEnzoNeo@26',
-    options: {
-      encrypt: process.env.MSSQL_ENCRYPT === 'true',
-      trustServerCertificate: process.env.MSSQL_TRUST_CERT === 'true',
-      enableArithAbort: true,
-      connectTimeout: 30000,
-      requestTimeout: 30000,
-    },
-    pool: {
-      max: parseInt(process.env.MSSQL_POOL_MAX || '4'),
-      min: parseInt(process.env.MSSQL_POOL_MIN || '2'),
-      idleTimeoutMillis: 30000,
-    },
-    connectionTimeout: 30000,
-  };
+  // MSSQL configuration from centralized config
+  const mssqlConfig: sql.config = appConfig.mssql;
 
   // Create connection pool
-  const pool = new sql.ConnectionPool(config);
+  const pool = new sql.ConnectionPool(mssqlConfig);
 
   // Create MssqlService wrapper
   const mssqlService = new MssqlService(pool);
@@ -38,8 +20,8 @@ const mssqlPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       await pool.connect();
       fastify.log.info(
         {
-          server: config.server,
-          database: config.database,
+          server: mssqlConfig.server,
+          database: mssqlConfig.database,
         },
         'MSSQL connection established successfully'
       );

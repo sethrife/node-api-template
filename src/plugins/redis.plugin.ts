@@ -2,25 +2,26 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 import { createClient, RedisClientOptions } from 'redis';
 import { RedisService } from '../services/redis.service.js';
+import { config as appConfig } from '../config/index.js';
 
 const redisPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Redis configuration
-  const config: RedisClientOptions = {
+  const redisConfig: RedisClientOptions = {
     socket: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
+      host: appConfig.redis.host,
+      port: appConfig.redis.port,
       reconnectStrategy: (retries) => {
         const delay = Math.min(retries * 50, 500);
         fastify.log.warn({ attempt: retries, delay }, 'Retrying Redis connection');
         return delay;
       },
     },
-    password: process.env.REDIS_PASSWORD,
-    database: parseInt(process.env.REDIS_DB || '0'),
+    password: appConfig.redis.password,
+    database: appConfig.redis.database,
   };
 
   // Create Redis client
-  const client = createClient(config);
+  const client = createClient(redisConfig);
 
   // Handle Redis errors to prevent application crashes
   client.on('error', (error) => {
