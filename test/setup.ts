@@ -85,6 +85,35 @@ jest.mock('redis', () => {
   };
 });
 
+// Mock redlock-universal for all tests
+jest.mock('redlock-universal', () => {
+  const mockLocks = new Map<string, boolean>();
+
+  const MockNodeRedisAdapter = jest.fn().mockImplementation(() => ({}));
+
+  const mockCreateRedlock = jest.fn().mockImplementation((config: any) => {
+    const key = config.key;
+    return {
+      acquire: jest.fn().mockImplementation(async () => {
+        if (mockLocks.has(key)) {
+          throw new Error('Failed to acquire lock');
+        }
+        mockLocks.set(key, true);
+        return { lockId: `${key}-${Date.now()}` };
+      }),
+      release: jest.fn().mockImplementation(async (handle: any) => {
+        mockLocks.delete(key);
+        return true;
+      }),
+    };
+  });
+
+  return {
+    NodeRedisAdapter: MockNodeRedisAdapter,
+    createRedlock: mockCreateRedlock,
+  };
+});
+
 // Mock mssql for all tests
 jest.mock('mssql', () => {
   const mockData = new Map<string, any>();
