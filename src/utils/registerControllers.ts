@@ -19,11 +19,7 @@ export function registerControllers(app: FastifyInstance, controllers: any[]) {
       const schema: RouteSchema | undefined = Reflect.getMetadata('schema', instance, methodName);
 
       // Normalize middleware to array and add validation prehandler if schema exists
-      let preHandler = middleware
-        ? Array.isArray(middleware)
-          ? middleware
-          : [middleware]
-        : [];
+      let preHandler = middleware ? (Array.isArray(middleware) ? middleware : [middleware]) : [];
 
       // Add validation prehandler if schema exists
       if (schema) {

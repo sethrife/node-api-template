@@ -7,7 +7,7 @@ import {
   UpdateUserDto,
   createUserSchema,
   updateUserSchema,
-  userIdParamSchema
+  userIdParamSchema,
 } from '../schemas/user.schema.js';
 
 @Controller('/users')
@@ -50,7 +50,7 @@ export class UserController {
   @Put('/:id')
   @Schema({
     params: userIdParamSchema,
-    body: updateUserSchema
+    body: updateUserSchema,
   })
   async updateUser(
     request: FastifyRequest<{ Params: { id: string }; Body: UpdateUserDto }>,

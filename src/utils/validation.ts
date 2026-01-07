@@ -37,8 +37,8 @@ export function createValidationPrehandler(schema: RouteSchema) {
           details: error.issues.map((e) => ({
             path: e.path.join('.'),
             message: e.message,
-            code: e.code
-          }))
+            code: e.code,
+          })),
         });
       }
       // Re-throw non-validation errors to Fastify error handler

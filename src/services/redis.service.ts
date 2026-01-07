@@ -106,7 +106,10 @@ export class RedisService {
    * @param ttl - Time to live in milliseconds (default: 30000ms = 30s)
    * @returns Object with lock instance and handle, or null if unable to acquire
    */
-  async acquireLock(lockKey: string, ttl: number = 30000): Promise<{ lock: Lock; handle: any } | null> {
+  async acquireLock(
+    lockKey: string,
+    ttl: number = 30000
+  ): Promise<{ lock: Lock; handle: any } | null> {
     try {
       const lock = this.createLock(lockKey, ttl);
       const handle = await lock.acquire();
@@ -150,13 +153,13 @@ export class RedisService {
       if (error instanceof Error && error.message.includes('lock')) {
         return {
           acquired: false,
-          error: 'Another process is already running this import'
+          error: 'Another process is already running this import',
         };
       }
       // Other errors during execution
       return {
         acquired: true,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

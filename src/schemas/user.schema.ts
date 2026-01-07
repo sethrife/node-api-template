@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const userSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().min(1, 'Name is required').max(100),
-  email: z.string().email('Invalid email format')
+  email: z.string().email('Invalid email format'),
 });
 
 /**
@@ -23,7 +23,7 @@ export const updateUserSchema = userSchema.omit({ id: true }).partial();
  * User ID parameter schema - validates route parameters
  */
 export const userIdParamSchema = z.object({
-  id: z.string().regex(/^\d+$/, 'ID must be numeric')
+  id: z.string().regex(/^\d+$/, 'ID must be numeric'),
 });
 
 /**

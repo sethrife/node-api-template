@@ -6,21 +6,21 @@ import { z } from 'zod';
  */
 export const paginationQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
-  offset: z.coerce.number().int().min(0).default(0)
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 /**
  * Generic ID parameter schema for numeric IDs
  */
 export const numericIdParamSchema = z.object({
-  id: z.string().regex(/^\d+$/, 'ID must be numeric')
+  id: z.string().regex(/^\d+$/, 'ID must be numeric'),
 });
 
 /**
  * Generic ID parameter schema for UUID IDs
  */
 export const uuidIdParamSchema = z.object({
-  id: z.string().uuid('Invalid UUID format')
+  id: z.string().uuid('Invalid UUID format'),
 });
 
 /**
@@ -28,7 +28,7 @@ export const uuidIdParamSchema = z.object({
  */
 export const searchQuerySchema = z.object({
   q: z.string().min(1, 'Search query is required').max(200),
-  ...paginationQuerySchema.shape
+  ...paginationQuerySchema.shape,
 });
 
 /**
