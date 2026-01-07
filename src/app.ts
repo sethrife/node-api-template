@@ -18,13 +18,11 @@ export async function buildApp(): Promise<FastifyInstance> {
     contextLoggerStorage.run(request.log, done);
   });
 
-  // Register Redis plugin
+  // Register plugins
   await app.register(redisPlugin);
-
-  // Register MSSQL plugin
   await app.register(mssqlPlugin);
 
-  // Register all controllers
+  // Register controllers
   registerControllers(app, [HealthController, UserController, ProtectedController]);
 
   return app;
