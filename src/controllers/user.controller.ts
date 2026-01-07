@@ -1,11 +1,14 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { Controller, Get, Post, Put, Delete } from '../decorators/route.decorator.js';
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-}
+import { Schema } from '../decorators/schema.decorator.js';
+import {
+  User,
+  CreateUserDto,
+  UpdateUserDto,
+  createUserSchema,
+  updateUserSchema,
+  userIdParamSchema
+} from '../schemas/user.schema.js';
 
 @Controller('/users')
 export class UserController {
@@ -20,6 +23,7 @@ export class UserController {
   }
 
   @Get('/:id')
+  @Schema({ params: userIdParamSchema })
   async getUserById(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
     const id = parseInt(request.params.id);
     const user = this.users.find((u) => u.id === id);
@@ -32,7 +36,8 @@ export class UserController {
   }
 
   @Post('/')
-  async createUser(request: FastifyRequest<{ Body: Omit<User, 'id'> }>, reply: FastifyReply) {
+  @Schema({ body: createUserSchema })
+  async createUser(request: FastifyRequest<{ Body: CreateUserDto }>, reply: FastifyReply) {
     const newUser: User = {
       id: this.users.length + 1,
       ...request.body,
@@ -43,8 +48,12 @@ export class UserController {
   }
 
   @Put('/:id')
+  @Schema({
+    params: userIdParamSchema,
+    body: updateUserSchema
+  })
   async updateUser(
-    request: FastifyRequest<{ Params: { id: string }; Body: Partial<Omit<User, 'id'>> }>,
+    request: FastifyRequest<{ Params: { id: string }; Body: UpdateUserDto }>,
     reply: FastifyReply
   ) {
     const id = parseInt(request.params.id);
@@ -59,6 +68,7 @@ export class UserController {
   }
 
   @Delete('/:id')
+  @Schema({ params: userIdParamSchema })
   async deleteUser(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
     const id = parseInt(request.params.id);
     const userIndex = this.users.findIndex((u) => u.id === id);

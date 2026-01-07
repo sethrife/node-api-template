@@ -1,5 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { getRoutes, getPrefix } from '../decorators/route.decorator.js';
+import { RouteSchema } from '../decorators/schema.decorator.js';
+import { createValidationPrehandler } from './validation.js';
 
 export function registerControllers(app: FastifyInstance, controllers: any[]) {
   for (const Controller of controllers) {
@@ -13,15 +15,23 @@ export function registerControllers(app: FastifyInstance, controllers: any[]) {
       const fullPath = path === '/' && prefix ? prefix : prefix + path;
       const handler = instance[methodName].bind(instance);
 
-      // Normalize middleware to array
-      const preHandler = middleware
+      // Check for schema metadata
+      const schema: RouteSchema | undefined = Reflect.getMetadata('schema', instance, methodName);
+
+      // Normalize middleware to array and add validation prehandler if schema exists
+      let preHandler = middleware
         ? Array.isArray(middleware)
           ? middleware
           : [middleware]
-        : undefined;
+        : [];
 
-      // Register with options if middleware exists
-      const routeOptions = preHandler ? { preHandler } : {};
+      // Add validation prehandler if schema exists
+      if (schema) {
+        preHandler = [...preHandler, createValidationPrehandler(schema)];
+      }
+
+      // Register with options if middleware or schema exists
+      const routeOptions = preHandler.length > 0 ? { preHandler } : {};
 
       switch (method) {
         case 'GET':
