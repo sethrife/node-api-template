@@ -9,9 +9,9 @@ import { JWTPayload } from 'jose';
 export interface RequestContextData {
   // Add your computed data properties here
   // Examples:
-  userId?: string;              // Derived from request.user.sub
-  tenantId?: string;            // Derived from request headers or JWT
-  permissions?: string[];       // Computed from user roles/scopes
+  userId?: string; // Derived from request.user.sub
+  tenantId?: string; // Derived from request headers or JWT
+  permissions?: string[]; // Computed from user roles/scopes
   // Add more properties as needed
 }
 

@@ -19,10 +19,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     contextLoggerStorage.run(request.log, done);
   });
 
-  // Register request context plugin for storing request-scoped data
-  await app.register(requestContext);
-
   // Register plugins
+  await app.register(requestContext);
   await app.register(redisPlugin);
   await app.register(mssqlPlugin);
 
