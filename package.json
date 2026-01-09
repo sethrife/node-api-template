@@ -23,6 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fastify/request-context": "^6.2.1",
     "fastify": "5.6.1",
     "fastify-plugin": "^5.1.0",
     "jose": "^6.1.2",

@@ -1,6 +1,7 @@
 /// <reference path="./types/fastify.d.ts" />
 import 'reflect-metadata';
 import Fastify, { FastifyInstance } from 'fastify';
+import requestContext from '@fastify/request-context';
 import redisPlugin from './plugins/redis.plugin.js';
 import mssqlPlugin from './plugins/mssql.plugin.js';
 import { registerControllers } from './utils/registerControllers.js';
@@ -17,6 +18,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   app.addHook('onRequest', (request, reply, done) => {
     contextLoggerStorage.run(request.log, done);
   });
+
+  // Register request context plugin for storing request-scoped data
+  await app.register(requestContext);
 
   // Register plugins
   await app.register(redisPlugin);
