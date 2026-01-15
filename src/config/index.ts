@@ -108,7 +108,7 @@ export const config: AppConfig = {
     port: getEnvInt('MSSQL_PORT', 1433),
     database: getEnvString('MSSQL_DATABASE', 'master')!,
     user: getEnvString('MSSQL_USER', 'sa')!,
-    password: getEnvString('MSSQL_PASSWORD', 'RosieEnzoNeo@26')!,
+    password: getEnvString('MSSQL_PASSWORD', '')!,
     options: {
       encrypt: getEnvBool('MSSQL_ENCRYPT'),
       trustServerCertificate: getEnvBool('MSSQL_TRUST_CERT'),
