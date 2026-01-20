@@ -1,16 +1,23 @@
 import { jwtAuth } from '../../src/middleware/jwt-auth.js';
-import { jwtVerify } from 'jose';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { jwtVerify, JWTPayload } from 'jose';
+import { FastifyReply } from 'fastify';
 
 const mockJwtVerify = jwtVerify as jest.MockedFunction<typeof jwtVerify>;
 
-function createMockRequest(authHeader?: string): FastifyRequest {
+interface MockRequest {
+  headers: {
+    authorization?: string;
+  };
+  user?: JWTPayload;
+}
+
+function createMockRequest(authHeader?: string): MockRequest {
   return {
     headers: {
       authorization: authHeader,
     },
     user: undefined,
-  } as unknown as FastifyRequest;
+  };
 }
 
 interface MockReply {
@@ -40,10 +47,10 @@ function createMockReply(): MockReply {
 
 async function callMiddleware(
   middleware: ReturnType<typeof jwtAuth>,
-  request: FastifyRequest,
+  request: MockRequest,
   reply: MockReply
 ) {
-  return middleware.call({} as any, request, reply as unknown as FastifyReply, jest.fn());
+  return middleware.call({} as any, request as any, reply as unknown as FastifyReply, jest.fn());
 }
 
 describe('jwtAuth middleware', () => {
