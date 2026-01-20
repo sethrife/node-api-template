@@ -22,17 +22,25 @@ function validateScopes(payload: JWTPayload, requiredScopes: string | string[]):
   // Normalize required scopes to array
   const required = Array.isArray(requiredScopes) ? requiredScopes : [requiredScopes];
 
-  // Extract scopes from JWT payload
+  // Extract scopes from JWT payload (check both 'scope' and 'scopes' properties)
   let tokenScopes: string[] = [];
 
+  // Check payload.scope (string or array)
   if (typeof payload.scope === 'string') {
-    // Space-separated string format: "read write admin"
     tokenScopes = payload.scope.split(' ');
+  } else if (Array.isArray(payload.scope)) {
+    tokenScopes = payload.scope;
+  }
+
+  // Check payload.scopes (string or array) and merge
+  if (typeof payload.scopes === 'string') {
+    tokenScopes = [...tokenScopes, ...payload.scopes.split(' ')];
   } else if (Array.isArray(payload.scopes)) {
-    // Array format: ["read", "write", "admin"]
-    tokenScopes = payload.scopes;
-  } else {
-    // No scopes in token
+    tokenScopes = [...tokenScopes, ...payload.scopes];
+  }
+
+  // No scopes found in token
+  if (tokenScopes.length === 0) {
     return false;
   }
 
