@@ -1,100 +1,148 @@
-import { buildApp } from '../../src/app';
-import { FastifyInstance } from 'fastify';
+import { jwtAuth } from '../../src/middleware/jwt-auth';
 import { jwtVerify } from 'jose';
+import { FastifyRequest, FastifyReply } from 'fastify';
 
 const mockJwtVerify = jwtVerify as jest.MockedFunction<typeof jwtVerify>;
 
-describe('jwtAuth middleware', () => {
-  let app: FastifyInstance;
+function createMockRequest(authHeader?: string): FastifyRequest {
+  return {
+    headers: {
+      authorization: authHeader,
+    },
+    user: undefined,
+  } as unknown as FastifyRequest;
+}
 
-  beforeEach(async () => {
-    app = await buildApp();
-    jest.clearAllMocks();
+interface MockReply {
+  statusCode: number;
+  body: any;
+  code: jest.Mock;
+  send: jest.Mock;
+}
+
+function createMockReply(): MockReply {
+  const reply: MockReply = {
+    statusCode: 200,
+    body: null,
+    code: jest.fn(),
+    send: jest.fn(),
+  };
+  reply.code.mockImplementation((code: number) => {
+    reply.statusCode = code;
+    return reply;
   });
+  reply.send.mockImplementation((body: any) => {
+    reply.body = body;
+    return reply;
+  });
+  return reply;
+}
 
-  afterEach(async () => {
-    await app.close();
+async function callMiddleware(
+  middleware: ReturnType<typeof jwtAuth>,
+  request: FastifyRequest,
+  reply: MockReply
+) {
+  return middleware.call({} as any, request, reply as unknown as FastifyReply, jest.fn());
+}
+
+describe('jwtAuth middleware', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('authentication', () => {
     it('should return 401 when Authorization header is missing', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/profile',
-      });
+      const middleware = jwtAuth();
+      const request = createMockRequest(undefined);
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(401);
-      const body = JSON.parse(response.body);
-      expect(body.error).toBe('Unauthorized');
-      expect(body.message).toBe('Invalid or missing token');
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(401);
+      expect(reply.send).toHaveBeenCalledWith({
+        error: 'Unauthorized',
+        message: 'Invalid or missing token',
+      });
     });
 
     it('should return 401 when Authorization header does not start with Bearer', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/profile',
-        headers: {
-          authorization: 'Basic sometoken',
-        },
-      });
+      const middleware = jwtAuth();
+      const request = createMockRequest('Basic sometoken');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(401);
-      const body = JSON.parse(response.body);
-      expect(body.error).toBe('Unauthorized');
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(401);
+      expect(reply.send).toHaveBeenCalledWith({
+        error: 'Unauthorized',
+        message: 'Invalid or missing token',
+      });
     });
 
     it('should return 401 when JWT verification fails', async () => {
       mockJwtVerify.mockRejectedValueOnce(new Error('Invalid signature'));
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/profile',
-        headers: {
-          authorization: 'Bearer invalid-token',
-        },
-      });
+      const middleware = jwtAuth();
+      const request = createMockRequest('Bearer invalid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(401);
-      const body = JSON.parse(response.body);
-      expect(body.error).toBe('Unauthorized');
-      expect(body.message).toBe('Invalid or missing token');
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(401);
+      expect(reply.send).toHaveBeenCalledWith({
+        error: 'Unauthorized',
+        message: 'Invalid or missing token',
+      });
     });
 
     it('should return 401 when token is expired', async () => {
       mockJwtVerify.mockRejectedValueOnce(new Error('Token expired'));
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/profile',
-        headers: {
-          authorization: 'Bearer expired-token',
-        },
-      });
+      const middleware = jwtAuth();
+      const request = createMockRequest('Bearer expired-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(401);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(401);
     });
 
     it('should attach user payload to request on successful verification', async () => {
+      const payload = {
+        sub: 'user-123',
+        email: 'user@example.com',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      };
       mockJwtVerify.mockResolvedValueOnce({
-        payload: {
-          sub: 'user-123',
-          email: 'user@example.com',
-          exp: Math.floor(Date.now() / 1000) + 3600,
-        },
+        payload,
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/profile',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth();
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
-      const body = JSON.parse(response.body);
-      expect(body.user.id).toBe('user-123');
+      await callMiddleware(middleware, request, reply);
+
+      expect(request.user).toEqual(payload);
+      expect(reply.code).not.toHaveBeenCalled();
+    });
+
+    it('should not call reply methods on successful authentication without scopes', async () => {
+      mockJwtVerify.mockResolvedValueOnce({
+        payload: { sub: 'user-123' },
+        protectedHeader: { alg: 'RS256' },
+      } as any);
+
+      const middleware = jwtAuth();
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
+
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
+      expect(reply.send).not.toHaveBeenCalled();
     });
   });
 
@@ -104,20 +152,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scope: 'read write admin',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
 
     it('should deny access when scope string does not contain required scope', async () => {
@@ -125,23 +170,21 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scope: 'read write',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
-      const body = JSON.parse(response.body);
-      expect(body.error).toBe('Forbidden');
-      expect(body.message).toBe('Insufficient permissions');
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
+      expect(reply.send).toHaveBeenCalledWith({
+        error: 'Forbidden',
+        message: 'Insufficient permissions',
+      });
     });
 
     it('should handle single scope in string', async () => {
@@ -149,20 +192,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scope: 'read',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/data',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('read');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
   });
 
@@ -172,20 +212,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scope: ['read', 'write', 'admin'],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
 
     it('should deny access when scope array does not contain required scope', async () => {
@@ -193,20 +230,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scope: ['read', 'write'],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
 
     it('should handle single scope in array', async () => {
@@ -214,20 +248,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scope: ['read'],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/data',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('read');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
   });
 
@@ -237,20 +268,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scopes: 'read write admin',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
 
     it('should deny access when scopes string does not contain required scope', async () => {
@@ -258,20 +286,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scopes: 'read write',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
 
     it('should handle single scope in scopes string', async () => {
@@ -279,20 +304,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scopes: 'read',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/data',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('read');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
   });
 
@@ -302,20 +324,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scopes: ['read', 'write', 'admin'],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
 
     it('should deny access when scopes array does not contain required scope', async () => {
@@ -323,20 +342,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scopes: ['read', 'write'],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
   });
 
@@ -347,20 +363,17 @@ describe('jwtAuth middleware', () => {
           sub: 'user-123',
           scope: 'read',
           scopes: ['write', 'admin'],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
 
     it('should merge scope array and scopes string', async () => {
@@ -369,20 +382,17 @@ describe('jwtAuth middleware', () => {
           sub: 'user-123',
           scope: ['read', 'write'],
           scopes: 'admin',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
 
     it('should merge scope string and scopes string', async () => {
@@ -391,20 +401,17 @@ describe('jwtAuth middleware', () => {
           sub: 'user-123',
           scope: 'read write',
           scopes: 'admin',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
 
     it('should merge scope array and scopes array', async () => {
@@ -413,20 +420,17 @@ describe('jwtAuth middleware', () => {
           sub: 'user-123',
           scope: ['read'],
           scopes: ['write', 'admin'],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
 
     it('should require all scopes when multiple are required', async () => {
@@ -435,20 +439,35 @@ describe('jwtAuth middleware', () => {
           sub: 'user-123',
           scope: 'users:write',
           scopes: ['admin'],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/protected/users',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth(['users:write', 'admin']);
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
+    });
+
+    it('should deny when missing one of multiple required scopes', async () => {
+      mockJwtVerify.mockResolvedValueOnce({
+        payload: {
+          sub: 'user-123',
+          scope: 'users:write',
+        },
+        protectedHeader: { alg: 'RS256' },
+      } as any);
+
+      const middleware = jwtAuth(['users:write', 'admin']);
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
+
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
   });
 
@@ -457,20 +476,17 @@ describe('jwtAuth middleware', () => {
       mockJwtVerify.mockResolvedValueOnce({
         payload: {
           sub: 'user-123',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
 
     it('should return 403 when scope is empty string', async () => {
@@ -478,20 +494,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scope: '',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
 
     it('should return 403 when scope is empty array', async () => {
@@ -499,20 +512,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scope: [],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
 
     it('should return 403 when scopes is empty string', async () => {
@@ -520,20 +530,17 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scopes: '',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
 
     it('should return 403 when scopes is empty array', async () => {
@@ -541,40 +548,52 @@ describe('jwtAuth middleware', () => {
         payload: {
           sub: 'user-123',
           scopes: [],
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/admin',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth('admin');
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(403);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).toHaveBeenCalledWith(403);
     });
 
     it('should allow access when no scopes are required', async () => {
       mockJwtVerify.mockResolvedValueOnce({
         payload: {
           sub: 'user-123',
-          exp: Math.floor(Date.now() / 1000) + 3600,
         },
         protectedHeader: { alg: 'RS256' },
       } as any);
 
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/protected/profile',
-        headers: {
-          authorization: 'Bearer valid-token',
-        },
-      });
+      const middleware = jwtAuth();
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
 
-      expect(response.statusCode).toBe(200);
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
+    });
+
+    it('should handle required scopes as array', async () => {
+      mockJwtVerify.mockResolvedValueOnce({
+        payload: {
+          sub: 'user-123',
+          scope: 'read write admin',
+        },
+        protectedHeader: { alg: 'RS256' },
+      } as any);
+
+      const middleware = jwtAuth(['read', 'admin']);
+      const request = createMockRequest('Bearer valid-token');
+      const reply = createMockReply();
+
+      await callMiddleware(middleware, request, reply);
+
+      expect(reply.code).not.toHaveBeenCalled();
     });
   });
 });
