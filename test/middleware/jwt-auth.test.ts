@@ -1,4 +1,4 @@
-import { jwtAuth } from '../../src/middleware/jwt-auth';
+import { jwtAuth } from '../../src/middleware/jwt-auth.js';
 import { jwtVerify } from 'jose';
 import { FastifyRequest, FastifyReply } from 'fastify';
 
