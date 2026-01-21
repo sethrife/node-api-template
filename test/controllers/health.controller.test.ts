@@ -64,5 +64,94 @@ describe('HealthController', () => {
       expect(body.services.mssql.status).toBe('ok');
       expect(body.services.mssql.error).toBeUndefined();
     });
+
+    it('should return degraded status when Redis fails', async () => {
+      const redisSpy = jest.spyOn(app.redis, 'ping').mockRejectedValueOnce(new Error('Redis connection refused'));
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/health',
+      });
+
+      const body = JSON.parse(response.body);
+      expect(response.statusCode).toBe(200);
+      expect(body.status).toBe('degraded');
+      expect(body.services.redis.status).toBe('error');
+      expect(body.services.redis.error).toBe('Redis connection refused');
+      expect(body.services.mssql.status).toBe('ok');
+
+      redisSpy.mockRestore();
+    });
+
+    it('should return degraded status when MSSQL fails', async () => {
+      const mssqlSpy = jest.spyOn(app.mssql, 'ping').mockRejectedValueOnce(new Error('MSSQL connection timeout'));
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/health',
+      });
+
+      const body = JSON.parse(response.body);
+      expect(response.statusCode).toBe(200);
+      expect(body.status).toBe('degraded');
+      expect(body.services.mssql.status).toBe('error');
+      expect(body.services.mssql.error).toBe('MSSQL connection timeout');
+      expect(body.services.redis.status).toBe('ok');
+
+      mssqlSpy.mockRestore();
+    });
+
+    it('should return degraded status when both Redis and MSSQL fail', async () => {
+      const redisSpy = jest.spyOn(app.redis, 'ping').mockRejectedValueOnce(new Error('Redis unavailable'));
+      const mssqlSpy = jest.spyOn(app.mssql, 'ping').mockRejectedValueOnce(new Error('MSSQL unavailable'));
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/health',
+      });
+
+      const body = JSON.parse(response.body);
+      expect(response.statusCode).toBe(200);
+      expect(body.status).toBe('degraded');
+      expect(body.services.redis.status).toBe('error');
+      expect(body.services.redis.error).toBe('Redis unavailable');
+      expect(body.services.mssql.status).toBe('error');
+      expect(body.services.mssql.error).toBe('MSSQL unavailable');
+
+      redisSpy.mockRestore();
+      mssqlSpy.mockRestore();
+    });
+
+    it('should return error status when Redis returns unexpected value', async () => {
+      const redisSpy = jest.spyOn(app.redis, 'ping').mockResolvedValueOnce('NOT_PONG' as any);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/health',
+      });
+
+      const body = JSON.parse(response.body);
+      expect(response.statusCode).toBe(200);
+      expect(body.status).toBe('degraded');
+      expect(body.services.redis.status).toBe('error');
+
+      redisSpy.mockRestore();
+    });
+
+    it('should return error status when MSSQL returns false', async () => {
+      const mssqlSpy = jest.spyOn(app.mssql, 'ping').mockResolvedValueOnce(false);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/health',
+      });
+
+      const body = JSON.parse(response.body);
+      expect(response.statusCode).toBe(200);
+      expect(body.status).toBe('degraded');
+      expect(body.services.mssql.status).toBe('error');
+
+      mssqlSpy.mockRestore();
+    });
   });
 });
