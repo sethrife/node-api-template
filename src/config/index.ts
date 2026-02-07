@@ -12,6 +12,14 @@ interface JwtConfig {
   jwksUrl: string | undefined;
 }
 
+interface HttpSignatureConfig {
+  jwksUrl: string | undefined;
+  privateKey: string | undefined;
+  keyId: string | undefined;
+  defaultAlgorithm: string;
+  maxAge: number;
+}
+
 interface RedisConfig {
   host: string;
   port: number;
@@ -48,6 +56,7 @@ interface MssqlConfig {
 interface AppConfig {
   server: ServerConfig;
   jwt: JwtConfig;
+  httpSignature: HttpSignatureConfig;
   redis: RedisConfig;
   mssql: MssqlConfig;
 }
@@ -89,6 +98,14 @@ export const config: AppConfig = {
 
   jwt: {
     jwksUrl: getEnvString('JWKS_URL'),
+  },
+
+  httpSignature: {
+    jwksUrl: getEnvString('HTTP_SIG_JWKS_URL'),
+    privateKey: getEnvString('HTTP_SIG_PRIVATE_KEY'),
+    keyId: getEnvString('HTTP_SIG_KEY_ID'),
+    defaultAlgorithm: getEnvString('HTTP_SIG_ALGORITHM', 'rsa-pss-sha512')!,
+    maxAge: getEnvInt('HTTP_SIG_MAX_AGE', 300),
   },
 
   redis: {
@@ -141,4 +158,4 @@ export function validateConfig(): void {
 }
 
 // Export types for use in other modules
-export type { AppConfig, ServerConfig, JwtConfig, RedisConfig, MssqlConfig };
+export type { AppConfig, ServerConfig, JwtConfig, HttpSignatureConfig, RedisConfig, MssqlConfig };

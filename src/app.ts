@@ -8,6 +8,7 @@ import { registerControllers } from './utils/registerControllers.js';
 import { HealthController } from './controllers/health.controller.js';
 import { UserController } from './controllers/user.controller.js';
 import { ProtectedController } from './controllers/protected.controller.js';
+import { SignedController } from './controllers/signed.controller.js';
 import { contextLoggerStorage } from './utils/logger.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -25,7 +26,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(mssqlPlugin);
 
   // Register controllers
-  registerControllers(app, [HealthController, UserController, ProtectedController]);
+  registerControllers(app, [HealthController, UserController, ProtectedController, SignedController]);
 
   return app;
 }

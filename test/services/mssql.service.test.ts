@@ -12,8 +12,7 @@ describe('MssqlService', () => {
 
   afterAll(async () => {
     await app.close();
-  });
-
+  })
   describe('query', () => {
     it('should execute a SQL query', async () => {
       const result = await app.mssql.query('SELECT 1 AS result');
