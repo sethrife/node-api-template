@@ -1,0 +1,10 @@
+CREATE OR REPLACE FUNCTION mask_email(email STRING)
+RETURNS STRING
+RETURN
+  CONCAT(
+    LEFT(SPLIT(email, '@')[0], 2),
+    REPEAT('*', GREATEST(LENGTH(SPLIT(email, '@')[0]) - 4, 0)),
+    RIGHT(SPLIT(email, '@')[0], LEAST(2, GREATEST(LENGTH(SPLIT(email, '@')[0]) - 2, 0))),
+    '@',
+    SPLIT(email, '@')[1]
+  );
