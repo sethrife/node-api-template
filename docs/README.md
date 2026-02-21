@@ -142,3 +142,12 @@ The project is configured with:
 - `experimentalDecorators: true` - Enable decorator syntax
 - `emitDecoratorMetadata: true` - Emit metadata for decorators
 - `strict: true` - Enable all strict type checking options
+
+## Documentation
+
+- [Authentication](./AUTH.md) - JWT authentication and authorization
+- [Middleware](./MIDDLEWARE.md) - HTTP signature verification
+- [Request Validation](./REQUEST_VALIDATION.md) - Zod-based request validation
+- [Request Context](./REQUEST_CONTEXT.md) - Request-scoped data storage
+- [Distributed Locking](./DISTRIBUTED_LOCK_USAGE.md) - Redis-based distributed locks
+- [Cache](./CACHE.md) - In-memory caching with LRU eviction and TTL
