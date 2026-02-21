@@ -1,6 +1,7 @@
 import { RedisService } from '../services/redis.service.js';
 import { MssqlService } from '../services/mssql.service.js';
 import { JWTPayload } from 'jose';
+import type { IOAuth2Service } from '../services/oauth2/types.js';
 
 /**
  * Request context data interface
@@ -19,6 +20,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     redis: RedisService;
     mssql: MssqlService;
+    oauth2: IOAuth2Service;
   }
 
   interface FastifyRequest {

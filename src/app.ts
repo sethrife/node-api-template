@@ -4,6 +4,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import requestContext from '@fastify/request-context';
 import redisPlugin from './plugins/redis.plugin.js';
 import mssqlPlugin from './plugins/mssql.plugin.js';
+import oauth2Plugin from './plugins/oauth2.plugin.js';
 import { registerControllers } from './utils/registerControllers.js';
 import { HealthController } from './controllers/health.controller.js';
 import { UserController } from './controllers/user.controller.js';
@@ -24,6 +25,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(requestContext);
   await app.register(redisPlugin);
   await app.register(mssqlPlugin);
+  await app.register(oauth2Plugin);
 
   // Register controllers
   registerControllers(app, [HealthController, UserController, ProtectedController, SignedController]);

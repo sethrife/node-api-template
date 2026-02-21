@@ -20,6 +20,18 @@ interface HttpSignatureConfig {
   maxAge: number;
 }
 
+interface OAuth2ProviderConfig {
+  tokenUrl: string;
+  clientId: string;
+  clientSecret: string;
+  scope?: string;
+}
+
+interface OAuth2Config {
+  providers: Record<string, OAuth2ProviderConfig>;
+  refreshBufferSeconds: number;
+}
+
 interface RedisConfig {
   host: string;
   port: number;
@@ -57,6 +69,7 @@ interface AppConfig {
   server: ServerConfig;
   jwt: JwtConfig;
   httpSignature: HttpSignatureConfig;
+  oauth2: OAuth2Config;
   redis: RedisConfig;
   mssql: MssqlConfig;
 }
@@ -88,6 +101,32 @@ function getEnvString(key: string, defaultValue?: string): string | undefined {
 }
 
 /**
+ * Discover OAuth2 providers from environment variables
+ * Looks for OAUTH2_<NAME>_TOKEN_URL patterns
+ */
+function discoverOAuth2Providers(): Record<string, OAuth2ProviderConfig> {
+  const providers: Record<string, OAuth2ProviderConfig> = {};
+  const tokenUrlPattern = /^OAUTH2_([A-Z0-9_]+)_TOKEN_URL$/;
+
+  for (const [key, value] of Object.entries(process.env)) {
+    const match = key.match(tokenUrlPattern);
+    if (match && value) {
+      const providerName = match[1].toLowerCase();
+      const prefix = `OAUTH2_${match[1]}`;
+
+      providers[providerName] = {
+        tokenUrl: value,
+        clientId: process.env[`${prefix}_CLIENT_ID`] || '',
+        clientSecret: process.env[`${prefix}_CLIENT_SECRET`] || '',
+        scope: process.env[`${prefix}_SCOPE`],
+      };
+    }
+  }
+
+  return providers;
+}
+
+/**
  * Application configuration object
  */
 export const config: AppConfig = {
@@ -106,6 +145,11 @@ export const config: AppConfig = {
     keyId: getEnvString('HTTP_SIG_KEY_ID'),
     defaultAlgorithm: getEnvString('HTTP_SIG_ALGORITHM', 'rsa-pss-sha512')!,
     maxAge: getEnvInt('HTTP_SIG_MAX_AGE', 300),
+  },
+
+  oauth2: {
+    providers: discoverOAuth2Providers(),
+    refreshBufferSeconds: getEnvInt('OAUTH2_REFRESH_BUFFER_SECONDS', 30),
   },
 
   redis: {
@@ -158,4 +202,4 @@ export function validateConfig(): void {
 }
 
 // Export types for use in other modules
-export type { AppConfig, ServerConfig, JwtConfig, HttpSignatureConfig, RedisConfig, MssqlConfig };
+export type { AppConfig, ServerConfig, JwtConfig, HttpSignatureConfig, OAuth2ProviderConfig, OAuth2Config, RedisConfig, MssqlConfig };

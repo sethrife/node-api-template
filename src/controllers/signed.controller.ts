@@ -140,4 +140,128 @@ export class SignedController {
       // user: request.user,  // Available when jwtAuth is enabled
     });
   }
+
+  /**
+   * Call an external API protected by OAuth2 (client credentials flow)
+   * Uses the 'partner' provider configured via OAUTH2_PARTNER_* env vars
+   */
+  @Post('/oauth2-proxy')
+  async oauth2Proxy(
+    request: FastifyRequest<{ Body: { targetUrl: string } }>,
+    reply: FastifyReply
+  ) {
+    const { targetUrl } = request.body;
+
+    try {
+      // Use OAuth2 client to make authenticated request
+      const response = await request.server.oauth2.fetch('partner', targetUrl);
+      const data = await response.text();
+
+      return reply.send({
+        message: 'OAuth2 authenticated request successful',
+        response: {
+          status: response.status,
+          body: data,
+        },
+      });
+    } catch (error) {
+      return reply.code(500).send({
+        error: 'oauth2_request_failed',
+        message: error instanceof Error ? error.message : 'Failed to make OAuth2 request',
+      });
+    }
+  }
+
+  /**
+   * Call an external API using token exchange (user context)
+   * Exchanges the incoming user's JWT for a downstream token
+   */
+  @Post('/oauth2-exchange')
+  async oauth2Exchange(
+    request: FastifyRequest<{ Body: { targetUrl: string } }>,
+    reply: FastifyReply
+  ) {
+    const { targetUrl } = request.body;
+    const userToken = request.headers.authorization?.replace('Bearer ', '');
+
+    if (!userToken) {
+      return reply.code(401).send({
+        error: 'missing_token',
+        message: 'Authorization header with Bearer token required',
+      });
+    }
+
+    try {
+      // Exchange user token for downstream service token
+      const response = await request.server.oauth2.fetch('partner', targetUrl, {
+        tokenExchange: { subjectToken: userToken },
+      });
+      const data = await response.text();
+
+      return reply.send({
+        message: 'Token exchange request successful',
+        response: {
+          status: response.status,
+          body: data,
+        },
+      });
+    } catch (error) {
+      return reply.code(500).send({
+        error: 'token_exchange_failed',
+        message: error instanceof Error ? error.message : 'Failed to exchange token',
+      });
+    }
+  }
+
+  /**
+   * Call an external API with both OAuth2 and HTTP signature
+   * Demonstrates combining both authentication methods
+   */
+  @Post('/oauth2-signed')
+  async oauth2Signed(
+    request: FastifyRequest<{ Body: { targetUrl: string; payload: unknown } }>,
+    reply: FastifyReply
+  ) {
+    const { targetUrl, payload } = request.body;
+
+    if (!config.httpSignature.privateKey || !config.httpSignature.keyId) {
+      return reply.code(503).send({
+        error: 'signing_not_configured',
+        message: 'HTTP signature signing not configured',
+      });
+    }
+
+    try {
+      // Create HTTP signer
+      const signer = await createSigner({
+        keyId: config.httpSignature.keyId,
+        privateKey: config.httpSignature.privateKey,
+        algorithm: config.httpSignature.defaultAlgorithm,
+        components: ['@method', '@target-uri', 'content-digest', 'content-type'],
+      });
+
+      // Make request with OAuth2 + HTTP signature
+      const response = await request.server.oauth2.fetch('partner', targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signer, // Adds HTTP signature on top of OAuth2
+      });
+
+      const data = await response.text();
+
+      return reply.send({
+        message: 'OAuth2 + HTTP signature request successful',
+        response: {
+          status: response.status,
+          body: data,
+        },
+      });
+    } catch (error) {
+      return reply.code(500).send({
+        error: 'request_failed',
+        message: error instanceof Error ? error.message : 'Request failed',
+      });
+    }
+  }
 }
