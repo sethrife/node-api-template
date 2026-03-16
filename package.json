@@ -24,6 +24,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fastify/formbody": "^8.0.2",
     "@fastify/request-context": "^6.2.1",
     "fastify": "5.6.1",
     "fastify-plugin": "^5.1.0",
