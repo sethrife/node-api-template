@@ -70,16 +70,16 @@ describe('formbodyPlugin', () => {
       return reply.send(parsed);
     });
 
-    await app2.ready();
-
-    const response = await app2.inject({
-      method: 'POST',
-      url: '/coerce',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      payload: 'age=42',
-    });
-
     try {
+      await app2.ready();
+
+      const response = await app2.inject({
+        method: 'POST',
+        url: '/coerce',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        payload: 'age=42',
+      });
+
       expect(response.statusCode).toBe(200);
       expect(JSON.parse(response.body)).toEqual({ age: 42 });
     } finally {

@@ -1,10 +1,10 @@
 import fp from 'fastify-plugin';
 import formbody from '@fastify/formbody';
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 
-async function formbodyPlugin(app: FastifyInstance) {
-  await app.register(formbody);
-}
+const formbodyPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
+  await fastify.register(formbody);
+};
 
 export default fp(formbodyPlugin, {
   fastify: '5.x',

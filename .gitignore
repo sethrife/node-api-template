@@ -21,6 +21,8 @@ coverage/
 .DS_Store
 Thumbs.db
 
+docs/superpowers/plans
+
 # Logs
 logs/
 *.log
