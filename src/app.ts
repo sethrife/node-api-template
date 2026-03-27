@@ -7,7 +7,10 @@ import mssqlPlugin from './plugins/mssql.plugin.js';
 import oauth2Plugin from './plugins/oauth2.plugin.js';
 import cachePlugin from './plugins/cache.plugin.js';
 import formbodyPlugin from './plugins/formbody.plugin.js';
+import schedulerPlugin from './plugins/scheduler.plugin.js';
 import { registerControllers } from './utils/registerControllers.js';
+import { registerJobs } from './utils/registerJobs.js';
+import { ExampleJob } from './jobs/example.job.js';
 import { HealthController } from './controllers/health.controller.js';
 import { UserController } from './controllers/user.controller.js';
 import { ProtectedController } from './controllers/protected.controller.js';
@@ -30,9 +33,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(oauth2Plugin);
   await app.register(cachePlugin, { maxEntries: 1000, defaultTtlMs: 300000 });
   await app.register(formbodyPlugin);
+  await app.register(schedulerPlugin);
 
   // Register controllers
   registerControllers(app, [HealthController, UserController, ProtectedController, SignedController]);
+  registerJobs(app, [ExampleJob]);
 
   return app;
 }

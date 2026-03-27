@@ -3,6 +3,7 @@ import { MssqlService } from '../services/mssql.service.js';
 import { JWTPayload } from 'jose';
 import type { IOAuth2Service } from '../services/oauth2/types.js';
 import type { CacheService } from '../plugins/cache.plugin.js';
+import type { SchedulerService } from '../services/scheduler.service.js';
 
 /**
  * Request context data interface
@@ -23,6 +24,7 @@ declare module 'fastify' {
     mssql: MssqlService;
     oauth2: IOAuth2Service;
     cache: CacheService;
+    scheduler: SchedulerService;
   }
 
   interface FastifyRequest {

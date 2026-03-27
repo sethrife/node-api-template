@@ -154,3 +154,13 @@ jest.mock('mssql', () => {
     Request: jest.fn().mockImplementation(() => mockRequest),
   };
 });
+
+// Mock node-schedule for all tests — prevents real cron timers from firing
+jest.mock('node-schedule', () => {
+  return {
+    scheduleJob: jest.fn((_name: string, _expression: string, _callback: () => void) => ({
+      cancel: jest.fn().mockReturnValue(true),
+    })),
+    cancelJob: jest.fn(),
+  };
+});
