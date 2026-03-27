@@ -1,11 +1,19 @@
 import { buildApp } from '../../src/app.js';
 import { FastifyInstance } from 'fastify';
 
+const TEST_JOB_NAME = 'test-job';
+const TEST_JOB_SCHEDULE = '*/5 * * * *';
+
 describe('JobsController', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
     app = await buildApp();
+    app.scheduler.add({
+      name: TEST_JOB_NAME,
+      schedule: TEST_JOB_SCHEDULE,
+      handler: async () => {},
+    });
     jest.clearAllMocks();
   });
 
@@ -28,11 +36,11 @@ describe('JobsController', () => {
       });
     });
 
-    it('includes the example-hourly job', async () => {
+    it('includes the test job', async () => {
       const response = await app.inject({ method: 'GET', url: '/api/jobs' });
       const body = JSON.parse(response.body);
 
-      expect(body.some((j: any) => j.name === 'example-hourly')).toBe(true);
+      expect(body.some((j: any) => j.name === TEST_JOB_NAME)).toBe(true);
     });
   });
 
@@ -40,12 +48,12 @@ describe('JobsController', () => {
     it('returns 202 with alreadyRunning: false when job is triggered', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/api/jobs/example-hourly/run',
+        url: `/api/jobs/${TEST_JOB_NAME}/run`,
       });
 
       expect(response.statusCode).toBe(202);
       const body = JSON.parse(response.body);
-      expect(body).toMatchObject({ name: 'example-hourly', alreadyRunning: false });
+      expect(body).toMatchObject({ name: TEST_JOB_NAME, alreadyRunning: false });
     });
 
     it('returns 202 with alreadyRunning: true when job is already running', async () => {
@@ -53,12 +61,12 @@ describe('JobsController', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/api/jobs/example-hourly/run',
+        url: `/api/jobs/${TEST_JOB_NAME}/run`,
       });
 
       expect(response.statusCode).toBe(202);
       const body = JSON.parse(response.body);
-      expect(body).toMatchObject({ name: 'example-hourly', alreadyRunning: true });
+      expect(body).toMatchObject({ name: TEST_JOB_NAME, alreadyRunning: true });
     });
 
     it('returns 404 when job name does not exist', async () => {
