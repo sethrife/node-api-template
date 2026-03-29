@@ -1,5 +1,6 @@
 import schedule from 'node-schedule';
 import type { FastifyBaseLogger } from 'fastify';
+import { contextLoggerStorage } from '../utils/logger.js';
 
 export interface JobDefinition {
   name: string;
@@ -96,26 +97,28 @@ export class SchedulerService {
   private async execute(state: JobState): Promise<void> {
     state.running = true;
     const { handler, name, retry } = state.definition;
-    const maxAttempts = (retry?.attempts ?? 0) + 1;  // 1 initial + N retries
-    const delayMs = retry?.delayMs ?? 0;
+    const jobLog = this.log.child({ job: name });
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        await handler();
-        state.running = false;
-        return;
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        this.log.error(
-          { job: name, attempt, error: error.message },
-          'Job execution failed'
-        );
-        if (attempt < maxAttempts) {
-          await new Promise<void>(resolve => setTimeout(resolve, delayMs));
+    try {
+      await contextLoggerStorage.run(jobLog, async () => {
+        const maxAttempts = (retry?.attempts ?? 0) + 1;  // 1 initial + N retries
+        const delayMs = retry?.delayMs ?? 0;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            await handler();
+            return;
+          } catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            jobLog.error({ attempt, error: error.message }, 'Job execution failed');
+            if (attempt < maxAttempts) {
+              await new Promise<void>(resolve => setTimeout(resolve, delayMs));
+            }
+          }
         }
-      }
+      });
+    } finally {
+      state.running = false;
     }
-
-    state.running = false;
   }
 }

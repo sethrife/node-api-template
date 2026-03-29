@@ -15,12 +15,14 @@ import { HealthController } from './controllers/health.controller.js';
 import { UserController } from './controllers/user.controller.js';
 import { ProtectedController } from './controllers/protected.controller.js';
 import { SignedController } from './controllers/signed.controller.js';
-import { contextLoggerStorage } from './utils/logger.js';
+import { configureLogger, contextLoggerStorage } from './utils/logger.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: true,
   });
+
+  configureLogger(app);
 
   app.addHook('onRequest', (request, reply, done) => {
     contextLoggerStorage.run(request.log, done);

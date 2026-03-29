@@ -16,9 +16,27 @@ import {
   DuplicateJobError,
   InvalidCronExpressionError,
 } from '../../src/services/scheduler.service.js';
+import { logger, contextLoggerStorage } from '../../src/utils/logger.js';
+
+function createChildLog() {
+  return { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn(), child: jest.fn() } as any;
+}
 
 function createMockLog() {
-  return { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() } as any;
+  const childLogs: any[] = [];
+  const mockLog = {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+    child: jest.fn().mockImplementation(() => {
+      const child = createChildLog();
+      childLogs.push(child);
+      return child;
+    }),
+  } as any;
+  mockLog._childLogs = childLogs;
+  return mockLog;
 }
 
 describe('SchedulerService', () => {
@@ -213,8 +231,8 @@ describe('SchedulerService', () => {
 
       // 1 initial + 2 retries = 3 total calls
       expect(handler).toHaveBeenCalledTimes(3);
-      // Each failure is logged
-      expect(log.error).toHaveBeenCalledTimes(3);
+      // Each failure is logged via the child (job-scoped) logger
+      expect(log._childLogs[0].error).toHaveBeenCalledTimes(3);
     });
 
     it('sets running to false after exhausting all retries', async () => {
@@ -253,6 +271,69 @@ describe('SchedulerService', () => {
 
       expect(handler).toHaveBeenCalledTimes(2);  // initial + 1 retry
       expect(scheduler.list()[0].running).toBe(false);
+    });
+  });
+
+  describe('job-scoped logger', () => {
+    it('handler can call logger() and receives the job-scoped logger', async () => {
+      let capturedLogger: any;
+      const handler = jest.fn(async () => {
+        capturedLogger = logger();
+      });
+
+      scheduler.add({ name: 'log-job', schedule: '* * * * *', handler });
+      scheduler.run('log-job');
+      await Promise.resolve(); // let the async execute() settle
+
+      expect(capturedLogger).toBeDefined();
+      expect(capturedLogger).toBe(log._childLogs[0]);
+    });
+
+    it('logger() reverts to previous value after job execution completes', async () => {
+      const outerLog = { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() } as any;
+      let loggerDuringJob: any;
+      let loggerAfterJob: any;
+
+      const handler = jest.fn(async () => {
+        loggerDuringJob = logger();
+      });
+
+      scheduler.add({ name: 'scoped-job', schedule: '* * * * *', handler });
+
+      await contextLoggerStorage.run(outerLog, async () => {
+        scheduler.run('scoped-job');
+        await Promise.resolve();
+        await Promise.resolve(); // wait for execute() to complete
+        loggerAfterJob = logger();
+      });
+
+      expect(loggerDuringJob).toBe(log._childLogs[0]);
+      expect(loggerAfterJob).toBe(outerLog);
+    });
+
+    it('two concurrent jobs each receive their own scoped logger', async () => {
+      let loggerA: any;
+      let loggerB: any;
+
+      scheduler.add({
+        name: 'job-a',
+        schedule: '* * * * *',
+        handler: async () => { loggerA = logger(); },
+      });
+      scheduler.add({
+        name: 'job-b',
+        schedule: '* * * * *',
+        handler: async () => { loggerB = logger(); },
+      });
+
+      scheduler.run('job-a');
+      scheduler.run('job-b');
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(loggerA).toBeDefined();
+      expect(loggerB).toBeDefined();
+      expect(loggerA).not.toBe(loggerB);
     });
   });
 });

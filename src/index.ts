@@ -1,11 +1,8 @@
 import { buildApp } from './app.js';
-import { configureLogger } from './utils/logger.js';
 import { config } from './config/index.js';
 
 async function start() {
   const app = await buildApp();
-
-  configureLogger(app);
 
   try {
     await app.listen({ port: config.server.port, host: config.server.host });
