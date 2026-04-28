@@ -19,7 +19,9 @@ import { configureLogger, contextLoggerStorage } from './utils/logger.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: true,
+    logger: {
+      level: process.env.LOG_LEVEL ?? 'info',
+    },
   });
 
   configureLogger(app);
