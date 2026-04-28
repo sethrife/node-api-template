@@ -11,6 +11,7 @@ interface MockRequest {
   headers: Record<string, string | undefined>;
   hostname: string;
   protocol: string;
+  log: any;
   httpSignature?: any;
 }
 
@@ -30,6 +31,7 @@ function createMockRequest(overrides: Partial<MockRequest> = {}): MockRequest {
     headers: {},
     hostname: 'example.com',
     protocol: 'https',
+    log: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as any,
     ...overrides,
   };
 }
