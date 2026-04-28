@@ -4,6 +4,7 @@ import { config } from '../../config/index.js';
 import { parseSignatureInput, parseSignature } from './parse.js';
 import { verifySignature } from './verify.js';
 import { createKeyResolver } from './jwks.js';
+import { buildSignatureBase } from './signature-base.js';
 
 // Import types to augment FastifyRequest
 import './http-signature-types.js';
@@ -26,12 +27,21 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
   } = options;
 
   return async (request, reply) => {
+    const log = request.log;
+
     // Extract headers
     const signatureHeader = request.headers['signature'] as string | undefined;
     const signatureInputHeader = request.headers['signature-input'] as string | undefined;
 
+    log.debug({
+      hasSignature: !!signatureHeader,
+      hasSignatureInput: !!signatureInputHeader,
+      requiredComponents: required,
+    }, 'http-sig: checking incoming request');
+
     // Check for required headers
     if (!signatureHeader || !signatureInputHeader) {
+      log.debug('http-sig: missing signature or signature-input header');
       return sendChallenge(reply, 'signature_required', 'Request signature required', required);
     }
 
@@ -40,6 +50,7 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
     const signatures = parseSignature(signatureHeader);
 
     if (sigInputs.length === 0 || signatures.length === 0) {
+      log.debug({ signatureInputHeader, signatureHeader }, 'http-sig: failed to parse signature headers');
       return sendChallenge(reply, 'invalid_signature', 'Invalid signature format', required);
     }
 
@@ -47,13 +58,26 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
     const sigInput = sigInputs[0];
     const signature = signatures.find((s) => s.label === sigInput.label);
 
+    log.debug({
+      label: sigInput.label,
+      keyId: sigInput.keyid,
+      algorithm: sigInput.alg,
+      components: sigInput.components,
+      created: sigInput.created,
+      expires: sigInput.expires,
+      age: sigInput.created ? Math.floor(Date.now() / 1000) - sigInput.created : undefined,
+      maxAge,
+    }, 'http-sig: parsed signature input');
+
     if (!signature) {
+      log.debug({ label: sigInput.label, availableLabels: signatures.map(s => s.label) }, 'http-sig: signature label mismatch');
       return sendChallenge(reply, 'invalid_signature', 'Signature label mismatch', required);
     }
 
     // Check required components are covered
     const missingComponents = required.filter((c) => !sigInput.components.includes(c));
     if (missingComponents.length > 0) {
+      log.debug({ required, actual: sigInput.components, missing: missingComponents }, 'http-sig: missing required components');
       return sendChallenge(
         reply,
         'missing_components',
@@ -65,11 +89,16 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
 
     // Get key resolver
     if (!jwksUrl) {
+      log.debug('http-sig: jwksUrl not configured');
       return reply.code(500).send({
         error: 'configuration_error',
         message: 'HTTP_SIG_JWKS_URL not configured',
       });
     }
+
+    // Log the exact signature base string being verified
+    const signatureBase = buildSignatureBase(request, sigInput);
+    log.debug({ signatureBase, jwksUrl }, 'http-sig: signature base string');
 
     const keyResolver = createKeyResolver(jwksUrl);
 
@@ -80,6 +109,8 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
     });
 
     if (!result.valid) {
+      log.debug({ error: result.error, keyId: sigInput.keyid, algorithm: sigInput.alg }, 'http-sig: verification failed');
+
       const errorMessages: Record<string, string> = {
         unsupported_algorithm: 'Unsupported signature algorithm',
         algorithm_not_allowed: 'Signature algorithm not allowed',
@@ -97,6 +128,8 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
         required
       );
     }
+
+    log.debug({ keyId: result.keyId, algorithm: result.algorithm, components: result.components }, 'http-sig: verification successful');
 
     // Attach signature info to request
     request.httpSignature = {
