@@ -43,6 +43,12 @@ export interface HttpSigOptions {
   required?: string[];
   /** JWKS URL for fetching public keys (overrides config) */
   jwksUrl?: string;
+  /**
+   * Request header whose value is used as the JWKS URL for that request.
+   * Overrides jwksUrl and config when present on the incoming request.
+   * Defaults to the HTTP_SIG_JWKS_URL_HEADER env var.
+   */
+  jwksUrlHeader?: string;
   /** Maximum age of signature in seconds (default: 300) */
   maxAge?: number;
   /** Allowed algorithms (default: all registered) */

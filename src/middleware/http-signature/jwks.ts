@@ -4,26 +4,37 @@ export interface KeyResolver {
   resolve(keyId: string, algorithm: string): Promise<CryptoKey>;
 }
 
+// Cache resolvers by URL so each unique JWKS endpoint gets one RemoteJWKSet
+// instance (which maintains its own key cache and refresh logic).
+const resolverCache = new Map<string, KeyResolver>();
+
+/** Clear the resolver cache. Intended for use in tests. */
+export function clearResolverCache(): void {
+  resolverCache.clear();
+}
+
 /**
- * Create a key resolver that fetches keys from a JWKS endpoint
+ * Return a key resolver for the given JWKS URL, creating one if needed.
+ * Resolvers are cached by URL so a single RemoteJWKSet is shared across requests.
  */
 export function createKeyResolver(jwksUrl: string): KeyResolver {
+  const cached = resolverCache.get(jwksUrl);
+  if (cached) return cached;
+
   const getKey = createRemoteJWKSet(new URL(jwksUrl));
 
-  return {
-    async resolve(keyId: string, algorithm: string): Promise<CryptoKey> {
-      // Map our algorithm names to JOSE algorithm identifiers
+  const resolver: KeyResolver = {
+    async resolve(_keyId: string, algorithm: string): Promise<CryptoKey> {
       const joseAlg = mapToJoseAlgorithm(algorithm);
-
-      // Fetch the key from JWKS
-      const key = await getKey(
+      return getKey(
         { alg: joseAlg },
         { payload: '', signature: '' } as any // Token not used for signature verification
       );
-
-      return key;
     },
   };
+
+  resolverCache.set(jwksUrl, resolver);
+  return resolver;
 }
 
 function mapToJoseAlgorithm(algorithm: string): string {
@@ -35,18 +46,4 @@ function mapToJoseAlgorithm(algorithm: string): string {
     default:
       return algorithm.toUpperCase();
   }
-}
-
-// Lazy-initialized default resolver
-let defaultResolver: KeyResolver | null = null;
-
-export function getDefaultKeyResolver(jwksUrl: string): KeyResolver {
-  if (!defaultResolver) {
-    defaultResolver = createKeyResolver(jwksUrl);
-  }
-  return defaultResolver;
-}
-
-export function resetDefaultKeyResolver(): void {
-  defaultResolver = null;
 }

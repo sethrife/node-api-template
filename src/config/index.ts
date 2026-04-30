@@ -14,6 +14,8 @@ interface JwtConfig {
 
 interface HttpSignatureConfig {
   jwksUrl: string | undefined;
+  /** Header name whose value overrides jwksUrl on a per-request basis */
+  jwksUrlHeader: string | undefined;
   privateKey: string | undefined;
   keyId: string | undefined;
   defaultAlgorithm: string;
@@ -141,6 +143,7 @@ export const config: AppConfig = {
 
   httpSignature: {
     jwksUrl: getEnvString('HTTP_SIG_JWKS_URL'),
+    jwksUrlHeader: getEnvString('HTTP_SIG_JWKS_URL_HEADER'),
     privateKey: getEnvString('HTTP_SIG_PRIVATE_KEY'),
     keyId: getEnvString('HTTP_SIG_KEY_ID'),
     defaultAlgorithm: getEnvString('HTTP_SIG_ALGORITHM', 'rsa-pss-sha512')!,

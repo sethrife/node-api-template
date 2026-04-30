@@ -21,13 +21,19 @@ const DEFAULT_REQUIRED_COMPONENTS = ['@method', '@target-uri', '@authority'];
 export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
   const {
     required = DEFAULT_REQUIRED_COMPONENTS,
-    jwksUrl = config.httpSignature.jwksUrl,
+    jwksUrl: optionsJwksUrl = config.httpSignature.jwksUrl,
+    jwksUrlHeader = config.httpSignature.jwksUrlHeader,
     maxAge = config.httpSignature.maxAge,
     algorithms,
   } = options;
 
   return async (request, reply) => {
     const log = request.log;
+
+    // Resolve JWKS URL: request header takes precedence over configured value.
+    const jwksUrl = jwksUrlHeader
+      ? (request.headers[jwksUrlHeader.toLowerCase()] as string | undefined) ?? optionsJwksUrl
+      : optionsJwksUrl;
 
     // Extract headers
     const signatureHeader = request.headers['signature'] as string | undefined;
@@ -98,7 +104,8 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
 
     // Log the exact signature base string being verified
     const signatureBase = buildSignatureBase(request, sigInput);
-    log.debug({ signatureBase, jwksUrl }, 'http-sig: signature base string');
+    const jwksUrlSource = jwksUrlHeader && request.headers[jwksUrlHeader.toLowerCase()] ? 'header' : 'config';
+    log.debug({ signatureBase, jwksUrl, jwksUrlSource }, 'http-sig: signature base string');
 
     const keyResolver = createKeyResolver(jwksUrl);
 

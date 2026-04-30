@@ -1,4 +1,4 @@
-import { createKeyResolver } from '../../../src/middleware/http-signature/jwks.js';
+import { createKeyResolver, clearResolverCache } from '../../../src/middleware/http-signature/jwks.js';
 import { createRemoteJWKSet } from 'jose';
 
 // The jose mock is automatically loaded from test/__mocks__/jose.ts
@@ -6,6 +6,7 @@ import { createRemoteJWKSet } from 'jose';
 describe('KeyResolver', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearResolverCache();
   });
 
   it('should create a resolver with JWKS URL', () => {

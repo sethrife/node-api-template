@@ -73,6 +73,7 @@ jest.mock('../../../src/config/index.js', () => ({
   config: {
     httpSignature: {
       jwksUrl: 'https://example.com/.well-known/jwks.json',
+      jwksUrlHeader: undefined,
       maxAge: 300,
       defaultAlgorithm: 'rsa-pss-sha512',
     },
@@ -84,9 +85,6 @@ jest.mock('../../../src/middleware/http-signature/jwks.js', () => {
   let mockPublicKey: any = null;
   return {
     createKeyResolver: jest.fn(() => ({
-      resolve: jest.fn(async () => mockPublicKey),
-    })),
-    getDefaultKeyResolver: jest.fn(() => ({
       resolve: jest.fn(async () => mockPublicKey),
     })),
     setMockPublicKey: (key: any) => {
