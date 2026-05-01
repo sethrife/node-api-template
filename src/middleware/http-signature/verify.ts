@@ -82,7 +82,7 @@ export async function verifySignature(
   // Resolve the public key
   let publicKey;
   try {
-    publicKey = await keyResolver.resolve(sigInput.keyid, sigInput.alg);
+    publicKey = await keyResolver.resolve(sigInput.keyid);
   } catch {
     return {
       valid: false,
