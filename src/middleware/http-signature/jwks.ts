@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, type CryptoKey } from 'jose';
 
 export interface KeyResolver {
-  resolve(keyId: string): Promise<CryptoKey>;
+  resolve(keyId: string, algorithm: string): Promise<CryptoKey>;
 }
 
 // Cache resolvers by URL so each unique JWKS endpoint gets one RemoteJWKSet
@@ -24,9 +24,10 @@ export function createKeyResolver(jwksUrl: string): KeyResolver {
   const getKey = createRemoteJWKSet(new URL(jwksUrl));
 
   const resolver: KeyResolver = {
-    async resolve(keyId: string): Promise<CryptoKey> {
+    async resolve(_keyId: string, algorithm: string): Promise<CryptoKey> {
+      const joseAlg = mapToJoseAlgorithm(algorithm);
       return getKey(
-        { kid: keyId },
+        { alg: joseAlg },
         { payload: '', signature: '' } as any // Token not used for signature verification
       );
     },
@@ -34,4 +35,15 @@ export function createKeyResolver(jwksUrl: string): KeyResolver {
 
   resolverCache.set(jwksUrl, resolver);
   return resolver;
+}
+
+function mapToJoseAlgorithm(algorithm: string): string {
+  switch (algorithm) {
+    case 'rsa-pss-sha512':
+      return 'PS512';
+    case 'rsa-v1_5-sha256':
+      return 'RS256';
+    default:
+      return algorithm.toUpperCase();
+  }
 }
