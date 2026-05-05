@@ -53,6 +53,8 @@ export interface HttpSigOptions {
   maxAge?: number;
   /** Allowed algorithms (default: all registered) */
   algorithms?: string[];
+  /** HTTP/HTTPS proxy URL for JWKS fetches (e.g. http://proxy:8080) */
+  jwksProxy?: string;
 }
 
 /**

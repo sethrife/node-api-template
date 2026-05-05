@@ -23,6 +23,7 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
     required = DEFAULT_REQUIRED_COMPONENTS,
     jwksUrl: optionsJwksUrl = config.httpSignature.jwksUrl,
     jwksUrlHeader = config.httpSignature.jwksUrlHeader,
+    jwksProxy = config.httpSignature.jwksProxy,
     maxAge = config.httpSignature.maxAge,
     algorithms,
   } = options;
@@ -107,7 +108,7 @@ export function httpSig(options: HttpSigOptions = {}): preHandlerHookHandler {
     const jwksUrlSource = jwksUrlHeader && request.headers[jwksUrlHeader.toLowerCase()] ? 'header' : 'config';
     log.debug({ signatureBase, jwksUrl, jwksUrlSource }, 'http-sig: signature base string');
 
-    const keyResolver = createKeyResolver(jwksUrl);
+    const keyResolver = createKeyResolver(jwksUrl, jwksProxy ?? undefined);
 
     // Verify signature
     const result = await verifySignature(request, sigInput, signature, keyResolver, {
