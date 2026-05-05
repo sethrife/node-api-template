@@ -21,4 +21,26 @@ describe('KeyResolver', () => {
 
     expect(createRemoteJWKSet).toHaveBeenCalledWith(new URL(url));
   });
+
+  it('should pass kid and alg to the jose getter', async () => {
+    const url = 'https://example.com/.well-known/jwks.json';
+    const mockKey = {};
+    const mockGetter = jest.fn().mockResolvedValue(mockKey);
+    (createRemoteJWKSet as jest.Mock).mockReturnValue(mockGetter);
+
+    const resolver = createKeyResolver(url);
+    await resolver.resolve('my-key-id', 'rsa-pss-sha512');
+
+    expect(mockGetter).toHaveBeenCalledWith(
+      expect.objectContaining({ kid: 'my-key-id', alg: 'PS512' }),
+      expect.anything()
+    );
+  });
+
+  it('should return the same resolver for the same URL', () => {
+    const url = 'https://example.com/.well-known/jwks.json';
+    const r1 = createKeyResolver(url);
+    const r2 = createKeyResolver(url);
+    expect(r1).toBe(r2);
+  });
 });

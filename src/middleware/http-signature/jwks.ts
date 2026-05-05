@@ -24,10 +24,10 @@ export function createKeyResolver(jwksUrl: string): KeyResolver {
   const getKey = createRemoteJWKSet(new URL(jwksUrl));
 
   const resolver: KeyResolver = {
-    async resolve(_keyId: string, algorithm: string): Promise<CryptoKey> {
+    async resolve(keyId: string, algorithm: string): Promise<CryptoKey> {
       const joseAlg = mapToJoseAlgorithm(algorithm);
       return getKey(
-        { alg: joseAlg },
+        { kid: keyId, alg: joseAlg },
         { payload: '', signature: '' } as any // Token not used for signature verification
       );
     },
