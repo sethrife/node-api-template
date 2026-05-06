@@ -83,7 +83,8 @@ export async function verifySignature(
   let publicKey;
   try {
     publicKey = await keyResolver.resolve(sigInput.keyid, sigInput.alg);
-  } catch {
+  } catch (err) {
+    request.log.warn({ err, keyId: sigInput.keyid }, 'http-sig: key resolution failed');
     return {
       valid: false,
       error: 'key_not_found',
@@ -102,7 +103,8 @@ export async function verifySignature(
         error: 'invalid_signature',
       };
     }
-  } catch {
+  } catch (err) {
+    request.log.warn({ err }, 'http-sig: signature verification threw');
     return {
       valid: false,
       error: 'verification_failed',
