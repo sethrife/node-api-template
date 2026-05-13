@@ -42,6 +42,28 @@ describe('@Job and @Cron decorators', () => {
     });
   });
 
+  it('@Cron stores runOnStartup when provided', () => {
+    @Job()
+    class MyJob {
+      @Cron('0 * * * *', { name: 'startup-job', runOnStartup: true })
+      async doWork() {}
+    }
+
+    const crons = getCrons(MyJob);
+    expect(crons[0].runOnStartup).toBe(true);
+  });
+
+  it('@Cron leaves runOnStartup undefined when not provided', () => {
+    @Job()
+    class MyJob {
+      @Cron('0 * * * *', { name: 'normal-job' })
+      async doWork() {}
+    }
+
+    const crons = getCrons(MyJob);
+    expect(crons[0].runOnStartup).toBeUndefined();
+  });
+
   it('@Cron stores retry options when provided', () => {
     @Job()
     class MyJob {

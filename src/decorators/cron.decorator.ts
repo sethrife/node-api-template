@@ -7,11 +7,13 @@ export interface CronDefinition {
   expression: string;
   name: string;
   retry?: { attempts: number; delayMs: number };
+  runOnStartup?: boolean;
 }
 
 export interface CronOptions {
   name: string;
   retry?: { attempts: number; delayMs: number };
+  runOnStartup?: boolean;
 }
 
 export function Job() {
@@ -28,6 +30,7 @@ export function Cron(expression: string, options: CronOptions) {
       expression,
       name: options.name,
       retry: options.retry,
+      runOnStartup: options.runOnStartup,
     });
     Reflect.defineMetadata(CRONS_KEY, crons, target.constructor);
   };
