@@ -7,11 +7,17 @@ function createMockApp() {
   return {
     get: jest.fn(),
     post: jest.fn(),
+    addHook: jest.fn(),
     scheduler: {
       add: jest.fn(),
       run: jest.fn().mockReturnValue({ alreadyRunning: false }),
     },
   } as unknown as FastifyInstance;
+}
+
+function getOnReadyHook(app: FastifyInstance): (() => Promise<void>) | undefined {
+  const call = (app as any).addHook.mock.calls.find(([name]: [string]) => name === 'onReady');
+  return call?.[1];
 }
 
 describe('@Job and @Cron decorators', () => {
@@ -140,7 +146,7 @@ describe('registerJobs()', () => {
     expect(call.handler).toBeDefined();
   });
 
-  it('calls scheduler.run() immediately for crons with runOnStartup: true', () => {
+  it('registers an onReady hook that calls scheduler.run() for crons with runOnStartup: true', async () => {
     @Job()
     class TestJob {
       @Cron('0 * * * *', { name: 'startup-tick', runOnStartup: true })
@@ -150,10 +156,16 @@ describe('registerJobs()', () => {
     const app = createMockApp();
     registerJobs(app, [TestJob]);
 
+    expect((app as any).scheduler.run).not.toHaveBeenCalled();
+
+    const hook = getOnReadyHook(app);
+    expect(hook).toBeDefined();
+    await hook!();
+
     expect((app as any).scheduler.run).toHaveBeenCalledWith('startup-tick');
   });
 
-  it('does not call scheduler.run() for crons without runOnStartup', () => {
+  it('does not register an onReady hook when no crons have runOnStartup', () => {
     @Job()
     class TestJob {
       @Cron('0 * * * *', { name: 'normal-tick' })
@@ -163,6 +175,7 @@ describe('registerJobs()', () => {
     const app = createMockApp();
     registerJobs(app, [TestJob]);
 
+    expect(getOnReadyHook(app)).toBeUndefined();
     expect((app as any).scheduler.run).not.toHaveBeenCalled();
   });
 

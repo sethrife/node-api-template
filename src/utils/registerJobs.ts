@@ -3,6 +3,8 @@ import { isJobClass, getCrons } from '../decorators/cron.decorator.js';
 import { registerJobsController } from '../controllers/jobs.controller.js';
 
 export function registerJobs(app: FastifyInstance, jobClasses: any[]): void {
+  const startupJobs: string[] = [];
+
   for (const JobClass of jobClasses) {
     if (!isJobClass(JobClass)) continue;
 
@@ -18,9 +20,17 @@ export function registerJobs(app: FastifyInstance, jobClasses: any[]): void {
         retry: cron.retry,
       });
       if (cron.runOnStartup) {
-        app.scheduler.run(cron.name);
+        startupJobs.push(cron.name);
       }
     }
+  }
+
+  if (startupJobs.length > 0) {
+    app.addHook('onReady', async () => {
+      for (const name of startupJobs) {
+        app.scheduler.run(name);
+      }
+    });
   }
 
   registerJobsController(app, app.scheduler);
