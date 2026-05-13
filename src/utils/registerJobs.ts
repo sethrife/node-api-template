@@ -17,6 +17,9 @@ export function registerJobs(app: FastifyInstance, jobClasses: any[]): void {
         handler,
         retry: cron.retry,
       });
+      if (cron.runOnStartup) {
+        app.scheduler.run(cron.name);
+      }
     }
   }
 

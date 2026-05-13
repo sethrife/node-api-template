@@ -9,6 +9,7 @@ function createMockApp() {
     post: jest.fn(),
     scheduler: {
       add: jest.fn(),
+      run: jest.fn().mockReturnValue({ alreadyRunning: false }),
     },
   } as unknown as FastifyInstance;
 }
@@ -137,6 +138,32 @@ describe('registerJobs()', () => {
     const call = (app as any).scheduler.add.mock.calls[0][0];
     // handler should be bound to the instance
     expect(call.handler).toBeDefined();
+  });
+
+  it('calls scheduler.run() immediately for crons with runOnStartup: true', () => {
+    @Job()
+    class TestJob {
+      @Cron('0 * * * *', { name: 'startup-tick', runOnStartup: true })
+      async tick() {}
+    }
+
+    const app = createMockApp();
+    registerJobs(app, [TestJob]);
+
+    expect((app as any).scheduler.run).toHaveBeenCalledWith('startup-tick');
+  });
+
+  it('does not call scheduler.run() for crons without runOnStartup', () => {
+    @Job()
+    class TestJob {
+      @Cron('0 * * * *', { name: 'normal-tick' })
+      async tick() {}
+    }
+
+    const app = createMockApp();
+    registerJobs(app, [TestJob]);
+
+    expect((app as any).scheduler.run).not.toHaveBeenCalled();
   });
 
   it('registers GET /api/jobs route', () => {
